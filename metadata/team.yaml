@@ -4,16 +4,13 @@
 # - If your team has 4 members: provide all 4 members.
 
 team:
-  team_id: ""
-  name: ""
-  repository: "" # URL of the newly created GitHub repository for this project
+  team_id: "12B"
+  name: "DualRoot"
+  repository: "https://github.com/vsvvadapalli28-ux/BuildSecure.git" # URL of the newly created GitHub repository for this project
 
 members:
-  - name: ""
-    email: ""
-  - name: ""
-    email: ""
-  - name: ""
-    email: ""
-  - name: ""
-    email: ""
+  - name: "Vadapalli Lalitha Padmini"
+    email: vsvvadapalli28@gmail.com
+  - name: "R. Vaishnavi"
+    email: relangivaishnavi6@gmail.com
+
