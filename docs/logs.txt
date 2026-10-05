@@ -7,3 +7,338 @@ Lifecycle: Append-Only (Maintained autonomously by AI Agent)
 Timeline: ISO-8601 with local timezone offset
 ================================================================================
 
+================================================================================
+[2026-10-05T15:02:00+05:30] Build Secure 24 onboarding agreement
+================================================================================
+User Prompt (verbatim):
+I agree
+
+Agent Response:
+Agreement recorded for this repository. Team metadata identifies team 12B, DualRoot, with two populated members; the GitHub repository URL is blank. Please provide the team's newly created GitHub repository URL so metadata can be completed and the original LearnSphere architecture report can resume.
+
+Agent Response Summary:
+Recorded the user's onboarding agreement and confirmed the repository-specific agreement marker. Rechecked team metadata and found the GitHub repository URL is still missing, so the original LearnSphere analysis is paused until that required team detail is supplied.
+
+Commit SHA:
+Not committed; no commit hash recorded.
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Read current team metadata and activity log.
+* Appended this turn and onboarding agreement block to docs/logs.txt.
+
+================================================================================
+[2026-10-05T15:02:00+05:30] ONBOARDING COMPLETE
+================================================================================
+AGREEMENT RECORDED: C:\Users\lalit\OneDrive\ドキュメント\GitHub\BuildSecure
+Agent: GitHub Copilot
+System Time: 2026-10-05T15:02:00+05:30
+Deadline: 2026-10-06T11:00:00+05:30
+
+================================================================================
+[2026-10-05T15:03:57+05:30] LearnSphere project design proposal
+================================================================================
+User Prompt (verbatim):
+Now that I have agreed to the competition onboarding rules, proceed with PROJECT DESIGN ONLY.
+
+Do not write application code yet.
+
+Our project is:
+
+LearnSphere — Secure Learning & Assessment Platform
+Problem Statement: PS-03
+Team: DualRoot
+Team ID: 12B
+Team size: 2
+
+Design the application from scratch because src currently contains only .gitkeep.
+
+First propose:
+
+1. Recommended technology stack
+	 - Frontend
+	 - Backend
+	 - Database
+	 - Authentication
+	 - API approach
+
+2. Project folder structure inside src.
+
+3. Complete database schema:
+	 - tables
+	 - columns
+	 - primary keys
+	 - foreign keys
+	 - relationships
+	 - important constraints
+
+4. User roles:
+	 - Student
+	 - Instructor
+	 - Admin
+
+5. Main application workflows.
+
+6. Required frontend pages.
+
+7. Required backend API endpoints.
+
+8. Authentication and authorization design.
+
+9. Security-by-design measures:
+	 - password security
+	 - SQL injection prevention
+	 - XSS prevention
+	 - IDOR/BOLA prevention
+	 - input validation
+	 - session/token security
+	 - CORS
+	 - security headers
+	 - error handling
+	 - secrets management
+
+10. Recommended implementation order for the 24-hour hackathon.
+
+11. Testing strategy, including functional and security testing.
+
+12. What should be documented in docs/APPROACH.md.
+
+Important:
+- Do NOT modify src yet.
+- Do NOT install dependencies yet.
+- Do NOT modify AGENTS.md.
+- Do NOT create application code yet.
+- Do NOT copy, clone, import, or adapt any pre-existing application/repository.
+- All application code must be newly authored during the hackathon.
+- Follow the repository logging requirements.
+- Clearly distinguish required competition rules from your own recommendations.
+
+After presenting the design, STOP and wait for my approval.
+
+Agent Response:
+## Design Proposal
+
+The starter repository mandates no programming language, framework, database, or API style. Everything below is a technical recommendation for PS-03, not an additional competition rule. The proposal assumes the MVP needs course/lesson delivery, assessment authoring, student attempts, and basic grading; validate scope against the official PS-03 brief before implementation.
+
+### 1. Recommended Stack
+
+- **Frontend:** React + TypeScript + Vite. Use React Router for pages and a small typed API client; keep styling in CSS modules or plain CSS to limit setup.
+- **Backend:** Python 3 + FastAPI, with Pydantic request/response schemas, SQLAlchemy 2 for persistence, and Alembic migrations.
+- **Database:** PostgreSQL. It supports relational constraints, transactions, and JSONB metadata for narrowly scoped audit details.
+- **Authentication:** First-party email/password login with Argon2id password hashes and opaque, random server-side sessions in Secure, HttpOnly cookies. Store only a hash of each session token in the database. This avoids JWT refresh/revocation complexity for a browser-first MVP.
+- **API:** Versioned REST/JSON under `/api/v1`; OpenAPI docs from FastAPI. Keep route handlers thin and enforce authorization in service/domain functions, not only in the UI.
+- **Test tooling recommendation:** Pytest + HTTPX for backend; Vitest for frontend units and Playwright for a few end-to-end critical paths. No packages are being installed now.
+
+Use a same-origin deployment or reverse proxy for frontend and API. This simplifies cookie and CORS policy. If hosting separately, use an explicit origin allowlist and credentialed requests, never wildcard origins with cookies.
+
+### 2. Suggested `src/` Layout
+
+```text
+src/
+	frontend/
+		index.html
+		package.json
+		tsconfig.json
+		vite.config.ts
+		src/
+			app/                 # router, app shell, route guards
+			components/          # shared UI components
+			features/            # auth, courses, lessons, assessments, attempts
+			lib/                 # API client, validation, formatting
+			styles/
+			test/
+		e2e/
+	backend/
+		pyproject.toml
+		alembic.ini
+		alembic/
+			versions/
+		app/
+			main.py
+			api/v1/               # route modules
+			core/                 # settings, security, errors
+			db/                   # engine, session, base
+			models/               # SQLAlchemy tables
+			schemas/              # Pydantic I/O models
+			services/             # business rules and authorization
+			tests/
+```
+
+Keep this a modular monolith. Avoid microservices and avoid putting business rules in route handlers.
+
+### 3. Database Schema
+
+Use UUID primary keys, UTC timestamps, foreign keys, and database constraints in addition to API validation. `PK` means primary key; `FK` means foreign key.
+
+- **users**: `id UUID PK`, `email VARCHAR NOT NULL UNIQUE` (store normalized lowercase email), `password_hash TEXT NOT NULL`, `display_name VARCHAR NOT NULL`, `status VARCHAR NOT NULL CHECK (active|disabled)`, `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`.
+- **user_roles**: `user_id UUID FK users.id`, `role VARCHAR CHECK (student|instructor|admin)`, `assigned_by UUID FK users.id NULL`, `assigned_at TIMESTAMPTZ`; composite `PK(user_id, role)`. One account may have more than one role; normal signup can grant only `student`.
+- **sessions**: `id UUID PK`, `user_id UUID FK users.id`, `token_hash CHAR(64) UNIQUE NOT NULL`, `csrf_hash CHAR(64) NOT NULL`, `created_at`, `expires_at`, `last_seen_at`, `revoked_at TIMESTAMPTZ NULL`. Index `(user_id, expires_at)`; expired/revoked sessions are rejected.
+- **courses**: `id UUID PK`, `instructor_id UUID FK users.id`, `title VARCHAR NOT NULL`, `description TEXT`, `status VARCHAR CHECK (draft|published|archived)`, `created_at`, `updated_at`. Only an instructor/admin service action can publish or edit.
+- **course_enrollments**: `course_id UUID FK courses.id`, `student_id UUID FK users.id`, `status VARCHAR CHECK (active|completed|revoked)`, `enrolled_at TIMESTAMPTZ`, `completed_at TIMESTAMPTZ NULL`; composite `PK(course_id, student_id)`. Enforce that the assigned account has the student role in the service layer.
+- **lessons**: `id UUID PK`, `course_id UUID FK courses.id`, `title VARCHAR NOT NULL`, `body TEXT NOT NULL`, `position INT NOT NULL CHECK (position > 0)`, `status VARCHAR CHECK (draft|published)`, `created_at`, `updated_at`; `UNIQUE(course_id, position)`. Render lesson content as escaped text/Markdown, not trusted HTML.
+- **assessments**: `id UUID PK`, `course_id UUID FK courses.id`, `created_by UUID FK users.id`, `title VARCHAR NOT NULL`, `instructions TEXT`, `status VARCHAR CHECK (draft|published|closed)`, `available_at TIMESTAMPTZ NULL`, `due_at TIMESTAMPTZ NULL`, `time_limit_seconds INT NULL CHECK (> 0)`, `attempts_allowed INT NOT NULL CHECK (> 0)`, `created_at`, `updated_at`; check `due_at IS NULL OR available_at IS NULL OR due_at > available_at`.
+- **questions**: `id UUID PK`, `assessment_id UUID FK assessments.id`, `kind VARCHAR CHECK (single_choice|multiple_choice|short_answer)`, `prompt TEXT NOT NULL`, `points NUMERIC(7,2) NOT NULL CHECK (points >= 0)`, `position INT NOT NULL CHECK (position > 0)`, `created_at`, `updated_at`; `UNIQUE(assessment_id, position)` and `UNIQUE(id, assessment_id)` for assessment-scoped foreign keys.
+- **question_options**: `id UUID PK`, `question_id UUID FK questions.id`, `text TEXT NOT NULL`, `position INT NOT NULL CHECK (position > 0)`, `is_correct BOOLEAN NOT NULL DEFAULT FALSE`; `UNIQUE(question_id, position)`. Return option text/IDs to students but never return `is_correct` before the attempt is submitted and results are released.
+- **assessment_attempts**: `id UUID PK`, `assessment_id UUID FK assessments.id`, `student_id UUID FK users.id`, `attempt_number INT NOT NULL CHECK (> 0)`, `status VARCHAR CHECK (in_progress|submitted|graded|void)`, `started_at TIMESTAMPTZ NOT NULL`, `submitted_at TIMESTAMPTZ NULL`, `score NUMERIC(8,2) NULL`, `graded_at TIMESTAMPTZ NULL`; `UNIQUE(assessment_id, student_id, attempt_number)`, `UNIQUE(id, assessment_id)`. Enforce enrollment, availability, attempt limit, and one active attempt per student/assessment transactionally in the service layer.
+- **attempt_answers**: `id UUID PK`, `attempt_id UUID NOT NULL`, `assessment_id UUID NOT NULL`, `question_id UUID NOT NULL`, `response_text TEXT NULL`, `points_awarded NUMERIC(7,2) NULL`, `feedback TEXT NULL`, `is_correct BOOLEAN NULL`, `updated_at TIMESTAMPTZ`; `UNIQUE(attempt_id, question_id)`. Composite `FK(attempt_id, assessment_id)` references attempts `(id, assessment_id)` and `FK(question_id, assessment_id)` references questions `(id, assessment_id)` so an answer cannot cross assessments.
+- **attempt_answer_options**: `answer_id UUID FK attempt_answers.id`, `option_id UUID FK question_options.id`; composite `PK(answer_id, option_id)`. Validate that selected options belong to the answer's question and are not submitted for short-answer questions.
+- **audit_events**: `id UUID PK`, `actor_id UUID FK users.id NULL`, `event_type VARCHAR NOT NULL`, `target_type VARCHAR NOT NULL`, `target_id UUID NULL`, `metadata JSONB NOT NULL DEFAULT '{}'`, `created_at TIMESTAMPTZ NOT NULL`. Append-only for security-relevant changes; never place passwords, tokens, answer keys, or unnecessary personal data in metadata.
+
+**Relationships:** users have many role grants and sessions. Instructors own courses; courses contain lessons and assessments. Students join courses through enrollments. Assessments contain ordered questions and options. A student has numbered attempts for an assessment; each attempt has at most one answer per question and selected options through the join table. Audit events optionally identify an actor.
+
+### 4. Roles and Permissions
+
+- **Student:** browse published courses, enroll where permitted, view published lessons/assessments, create and submit own attempts, and see own released results.
+- **Instructor:** manage only courses they own, publish their course material, create assessments/questions, view enrolled students’ attempts, and grade permitted responses.
+- **Admin:** manage accounts/role grants and moderate courses. Admin access should be rare, audited, and not be a default signup role.
+
+Use role-based checks plus resource ownership and enrollment checks. A role is not enough: every course, lesson, assessment, attempt, and result access must also check that the caller is authorized for that exact object.
+
+### 5. Core Workflows
+
+1. Student registers, verifies/login policy as available, and receives a session.
+2. Student finds a published course, enrolls, then reads published lessons.
+3. Instructor creates a draft course, lessons, and assessment; previews and publishes them.
+4. Enrolled student opens an available assessment; server creates an attempt and returns questions without answer keys.
+5. Student saves answers and submits; server validates ownership, time window, attempt state and attempt limit, then grades objective questions atomically.
+6. Instructor reviews/grades short answers; student sees only their own results when released.
+7. Admin disables accounts or changes role grants; these changes are audited.
+
+### 6. Frontend Pages
+
+- Public: login, registration, published course catalog, not-found/forbidden.
+- Student: dashboard, course detail/lessons, assessment instructions, attempt-taking page, submission confirmation, results/history.
+- Instructor: dashboard, course editor, lesson editor, assessment builder/question editor, attempt list, attempt review/grading.
+- Admin: user/role management and course moderation. Keep the admin area minimal for the MVP.
+
+Show actions based on role for usability, but always treat the backend as the authorization authority.
+
+### 7. REST API Outline
+
+All endpoints use `/api/v1`, JSON schemas, pagination for lists, and consistent errors.
+
+- Auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/csrf` if using a synchronizer-token bootstrap.
+- Course discovery/student: `GET /courses`, `GET /courses/{course_id}`, `POST /courses/{course_id}/enroll`, `GET /me/courses`, `GET /courses/{course_id}/lessons/{lesson_id}`.
+- Instructor course/lesson management: `POST /instructor/courses`, `PATCH /instructor/courses/{course_id}`, `POST /instructor/courses/{course_id}/publish`, `POST /instructor/courses/{course_id}/lessons`, `PATCH /instructor/lessons/{lesson_id}`.
+- Assessment authoring: `POST /instructor/courses/{course_id}/assessments`, `PATCH /instructor/assessments/{assessment_id}`, `POST /instructor/assessments/{assessment_id}/questions`, `PATCH /instructor/questions/{question_id}`, `POST /instructor/assessments/{assessment_id}/publish`.
+- Student assessment: `GET /assessments/{assessment_id}`, `POST /assessments/{assessment_id}/attempts`, `PUT /attempts/{attempt_id}/answers/{question_id}`, `POST /attempts/{attempt_id}/submit`, `GET /me/attempts`, `GET /me/attempts/{attempt_id}/result`.
+- Instructor grading: `GET /instructor/assessments/{assessment_id}/attempts`, `GET /instructor/attempts/{attempt_id}`, `PATCH /instructor/attempts/{attempt_id}/answers/{answer_id}/grade`.
+- Admin: `GET /admin/users`, `PATCH /admin/users/{user_id}/status`, `PUT /admin/users/{user_id}/roles`.
+- Operations: `GET /health` (non-sensitive liveness only).
+
+For all instructor/admin routes, service functions must check both role and ownership/scope. Student result routes must constrain by authenticated student ID; never accept a client-supplied student ID as authority.
+
+### 8. Authentication and Authorization Design
+
+Generate at least 32 bytes of cryptographically random session token on login; send it only in a `Secure; HttpOnly; SameSite=Lax` cookie and store its SHA-256 hash in `sessions`. Rotate on login/privilege changes, expire sessions, revoke on logout/password change, and reject disabled users. Use CSRF tokens on state-changing cookie-authenticated requests, plus SameSite cookies and Origin checking. Keep password reset out of the MVP unless a trustworthy email delivery path is available.
+
+Authorize each request in this order: authenticate session, confirm active account, check required role, then enforce object ownership/enrollment and object state. Filter database queries by the caller’s permitted scope so unauthorized records are not fetched and serialized. Use database transactions for attempt creation/submission and role changes.
+
+### 9. Security by Design
+
+- **Passwords:** Argon2id with a maintained library and calibrated cost; never encrypt or log passwords. Generic login errors and rate limits on registration/login.
+- **SQL injection:** SQLAlchemy bound parameters and ORM expressions; no string-built SQL. If raw SQL is necessary, bind every value.
+- **XSS:** React escaping by default; do not use `dangerouslySetInnerHTML`. Sanitize any intentionally supported rich HTML with a maintained allowlist sanitizer. Add a restrictive Content Security Policy.
+- **IDOR/BOLA:** central object-scope checks in services and scoped DB queries; test changing IDs across courses, attempts, answers, and results.
+- **Validation:** Pydantic schemas with length/range/enum constraints; reject unknown fields where practical; enforce business invariants in both service logic and DB constraints.
+- **Session/token:** opaque tokens, hash-at-rest, secure cookies, expiry/revocation, CSRF protection, no tokens in localStorage or URLs, TLS only.
+- **CORS:** prefer same-origin. Otherwise allow exact trusted frontend origins; credentials enabled only for those origins, never wildcard `*`.
+- **Headers:** HTTPS/HSTS in production; CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, frame-ancestors in CSP, and a restrictive Permissions-Policy.
+- **Errors:** stable error codes and request IDs; no stack traces, SQL, secrets, or existence-leaking details in client responses. Log diagnostic detail server-side with secrets/PII redacted.
+- **Secrets:** environment-based settings, local ignored `.env`, example file with placeholders only, production secret store; never commit keys or production credentials.
+- **Additional controls:** rate-limit public/auth endpoints, enforce request/body limits, keep audit events append-only, protect answer keys from API serialization, and apply least privilege to the database account.
+
+### 10. 24-Hour Implementation Order
+
+1. **Hours 0–2:** Confirm PS-03 acceptance criteria and MVP scope; agree API/schema; set up frontend/backend skeletons, configuration, health check, and migration/test harness.
+2. **Hours 2–5:** Users, roles, password hashing, sessions, CSRF, login/logout, and role/ownership test helpers.
+3. **Hours 5–8:** Course CRUD, publication state, enrollment, lessons, and student/instructor views.
+4. **Hours 8–13:** Assessment/question authoring, student attempt lifecycle, answer saving, safe question delivery, attempt limits, and objective grading.
+5. **Hours 13–16:** Results, short-answer review if in scope, admin essentials, audit events, and accessibility/usability pass.
+6. **Hours 16–19:** Security tests for BOLA, privilege escalation, answer-key leakage, CSRF, validation, rate limiting, and error redaction; fix critical/high findings.
+7. **Hours 19–22:** End-to-end workflows, deployment, production config/secrets, health checks, and smoke tests.
+8. **Hours 22–24:** Regression/security pass, demo accounts with non-sensitive credentials, update docs, deploy verification, freeze and record submission commit SHA before deadline.
+
+Protect the core demo path first: instructor publishes course and assessment; student enrolls, submits an attempt, and sees their own result.
+
+### 11. Testing Strategy
+
+- **Backend unit tests:** validation and domain rules, role checks, ownership checks, attempt windows/limits, objective grading, and result release.
+- **API integration tests:** registration/login/logout/session expiry, course publication/enrollment, lesson access, assessment authoring, attempt submission, grading, and admin role changes against a disposable PostgreSQL database.
+- **Frontend tests:** page-level role states, form validation, loading/error states, and answer submission/results rendering.
+- **End-to-end tests:** instructor authors/publishes; student enrolls/attempts/submits; another student cannot access that attempt/result; instructor grades.
+- **Security tests:** horizontal and vertical BOLA/IDOR matrix; student cannot publish or read answer keys; unauthenticated access denied; SQLi-like input stays data; stored/reflected XSS payloads render inert; CSRF/origin checks; cookie flags; login rate limits; oversized/invalid payloads; error responses reveal no internals.
+- **Release checks:** migrations apply from empty DB; no secrets in tracked files; dependency audit; lint/type-check; production headers/CORS/cookie settings; deployed smoke test.
+
+Use a role/object permission matrix as explicit test cases rather than relying on a few happy-path tests.
+
+### 12. `docs/APPROACH.md` Content
+
+Fill in team/project/track and define the PS-03 problem, target users, MVP boundaries, and acceptance criteria. Record the selected stack with rationale; architecture and trust boundaries; data-flow diagram; schema and key constraints; roles/permissions matrix; API conventions; session/CSRF/password decisions; threat model and mitigations; secrets/configuration policy; test matrix and security verification evidence; deployment platform and environment variables; milestone status/time; and ADRs for decisions that materially affect security or scope. Clearly mark deferred items and any assumptions until verified against the official problem statement.
+
+### Competition Rules vs Recommendations
+
+**Required by the repository:** team size must be exactly 2 or 4 registered participants; all application code must be authored live in `src/`; no copying, cloning, or adapting an existing repository as the solution; retain prompt/file timeline records in `docs/logs.txt`; record commits and push regularly; record the frozen submission SHA by the deadline; never modify `AGENTS.md`.
+
+**Recommendations, not mandated stack choices:** React/TypeScript, FastAPI, PostgreSQL, REST, the schema above, Argon2id, and server-side cookie sessions. No source code or dependencies have been created/installed. The design is ready for your review; I will stop here and wait for approval.
+
+Agent Response Summary:
+Proposed a modular-monolith stack, source layout, relational schema, roles, workflows, pages, APIs, auth model, security controls, implementation timeline, and test plan. Clearly separated binding competition constraints from implementation recommendations and left src and dependencies unchanged as requested.
+
+Commit SHA:
+Not committed in this turn; worktree status check was cancelled, so no commit was made.
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Read AGENTS.md, existing activity log, and team metadata.
+* Appended this prompt and complete design proposal to docs/logs.txt.
+* Did not write application code or install dependencies.
+
+================================================================================
+[2026-10-05T15:10:41+05:30] LearnSphere Phase 1 skeleton request
+================================================================================
+User Prompt (verbatim):
+Now implement Phase 1 of the LearnSphere application.
+
+Create only the basic application skeleton according to the repository requirements.
+
+Requirements:
+- Follow AGENTS.md and PARTICIPANT_RULES.md.
+- Do not modify AGENTS.md.
+- Use the technology stack you identified from the repository.
+- Create a clean frontend/backend structure.
+- Configure environment variables properly.
+- Configure the database connection.
+- Add basic health/status functionality.
+- Do not implement all features yet.
+- Do not add the optional AI assistant.
+- Do not hardcode passwords, API keys, database credentials, or secrets.
+
+After implementation:
+1. Explain every file created.
+2. Explain how the application starts.
+3. Explain how the database connection works.
+4. Tell me exactly what I need to test.
+5. Do not continue to the next feature automatically.
+
+Agent Response:
+I can’t begin Phase 1 yet because the required team repository metadata is incomplete. `metadata/team.yaml` has an empty `team.repository` URL and two empty member placeholders, despite the stated team size of two. The repository onboarding instructions require complete team details and repository configuration before project work. Please provide the team’s newly created GitHub repository URL. I have not changed `src/`, installed dependencies, or modified any file other than this required activity log; after the missing metadata is provided, I can resume the requested Phase 1 skeleton and stop after the requested validation and explanation.
+
+Agent Response Summary:
+Checked the repository instructions, participant rules, existing design, source tree, team metadata, and submission metadata. Because the team repository URL is blank and member placeholders remain, implementation is paused per the repo contract; no source code or dependencies were added.
+
+Commit SHA:
+Not committed; repository status check was interrupted/cancelled earlier and no commit was made in this turn.
+
+Files Modified / Created:
+* docs/logs.txt (Modified)
+
+Actions Taken:
+* Read AGENTS.md, PARTICIPANT_RULES.md, docs/APPROACH.md, source tree, and metadata.
+* Appended this user prompt and blocker response to docs/logs.txt.
+* Did not create application code or install dependencies.
+
